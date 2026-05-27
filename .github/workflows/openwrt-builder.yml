@@ -2,7 +2,7 @@
 # https://github.com/P3TERX/Actions-OpenWrt
 #
 # File: .github/workflows/openwrt-builder.yml
-# Description: Build OpenWrt for multiple devices using GitHub Actions
+# Description: Build OpenWrt multi-profile for all devices using GitHub Actions
 #
 # Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
 # Copyright (c) 2025 icyray
@@ -11,102 +11,24 @@
 # See /LICENSE for more information.
 #
 
-name: Build Multi-Device Immortalwrt 24.10-6.6
+name: Build Multi-Profile Immortalwrt 24.10-6.6
 
 on:
   repository_dispatch:
   workflow_dispatch:
-    inputs:
-      device:
-        description: '选择要编译的设备 (留空则编译全部)'
-        required: false
-        default: ''
-        type: choice
-        options:
-          - ''
-          - cudy-tr3000
-          - rax3000m
-          - nx30pro
-
-env:
-  REPO_URL: https://github.com/padavanonly/immortalwrt-mt798x-24.10
-  REPO_BRANCH: openwrt-24.10-6.6
-  FEEDS_CONF: feeds.conf.default
-  DIY_P1_SH: diy-part1.sh
-  TZ: Asia/Shanghai
 
 jobs:
-  setup:
-    runs-on: ubuntu-latest
-    outputs:
-      matrix: ${{ steps.set-matrix.outputs.matrix }}
-      repo_url: ${{ env.REPO_URL }}
-      repo_branch: ${{ env.REPO_BRANCH }}
-      feeds_conf: ${{ env.FEEDS_CONF }}
-      diy_p1_sh: ${{ env.DIY_P1_SH }}
-      tz: ${{ env.TZ }}
-
-    steps:
-      - name: Set build matrix
-        id: set-matrix
-        run: |
-          # 定义所有设备配置
-          ALL_DEVICES='[{"device":"cudy-tr3000","config":"cudy-tr3000.config","diy":"cudy-tr3000.sh","release":"cudy-tr3000.md"},{"device":"rax3000m","config":"rax3000m.config","diy":"rax3000m.sh","release":"rax3000m.md"},{"device":"nx30pro","config":"nx30pro.config","diy":"nx30pro.sh","release":"nx30pro.md"}]'
-          
-          # 根据输入参数过滤设备
-          if [ -n "${{ github.event.inputs.device }}" ]; then
-            SELECTED="${{ github.event.inputs.device }}"
-            # 确保jq正确处理字符串
-            FILTERED=$(echo "$ALL_DEVICES" | jq --arg d "$SELECTED" '[.[] | select(.device == $d)]')
-            echo "matrix=$FILTERED" >> $GITHUB_OUTPUT
-          else
-            echo "matrix=$ALL_DEVICES" >> $GITHUB_OUTPUT
-          fi
-          
-          # 输出调试信息
-          echo "Selected device: ${{ github.event.inputs.device }}"
-          echo "Matrix: $(echo $ALL_DEVICES | jq -r '.[].device')"
-
-  call-builder:
-    needs: setup
-    strategy:
-      fail-fast: false
-      matrix:
-        include: ${{ fromJson(needs.setup.outputs.matrix) }}
+  build:
     uses: ./.github/workflows/image-builder.yml
     with:
-      repo_url: ${{ needs.setup.outputs.repo_url }}
-      repo_branch: ${{ needs.setup.outputs.repo_branch }}
-      feeds_conf: ${{ needs.setup.outputs.feeds_conf }}
-      config_file: ${{ matrix.config }}
-      diy_p1_sh: ${{ needs.setup.outputs.diy_p1_sh }}
-      diy_p2_sh: ${{ matrix.diy }}
-      release_file: ${{ matrix.release }}
+      repo_url: https://github.com/padavanonly/immortalwrt-mt798x-24.10
+      repo_branch: openwrt-24.10-6.6
+      config_file: mtk_filogic.config
+      diy_p1_sh: diy-part1.sh
+      diy_p2_sh: mtk_filogic.sh
+      feeds_conf: feeds.conf.default
+      release_file: release.md
       upload_bin_dir: false
       upload_firmware: true
       upload_release: true
-      tz: ${{ needs.setup.outputs.tz }}
-
-  update-cache:
-    runs-on: ubuntu-latest
-    needs: call-builder
-    if: always()
-    steps:
-      - name: Get current workflow filename
-        id: get-filename
-        run: |
-          # 使用固定的工作流文件名
-          echo "filename=openwrt-builder" >> $GITHUB_OUTPUT
-          echo "Current workflow file: openwrt-builder"
-
-      - name: Prepare cache directory
-        run: |
-          mkdir -p .cache-dir
-          echo "Cache preparation completed"
-          
-      - name: Create cache identifier
-        run: |
-          # 创建一个简单的缓存标识符
-          echo "$(date +%s)" > .cache-id
-          echo "Cache ID created"
-
+      tz: Asia/Shanghai

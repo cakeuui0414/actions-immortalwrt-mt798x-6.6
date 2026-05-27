@@ -40,6 +40,11 @@ sed -i 's|IMG_PREFIX:=|IMG_PREFIX:=$(shell TZ="Asia/Shanghai" date +"%Y%m%d")-24
 # Fix libxcrypt build error with musl fortify
 sed -i '/^PKG_NAME:=libxcrypt/a PKG_FORTIFY_SOURCE:=0' package/feeds/packages/libxcrypt/Makefile
 
+rm -rf feeds/packages/lang/golang
+git clone https://github.com/kenzok8/golang -b 1.26 feeds/packages/lang/golang
+
+git clone https://github.com/rchen14b/luci-theme-glass.git package/luci-theme-glass
+
 # compile and build
 # make download -j8
 # make -j$(nproc)

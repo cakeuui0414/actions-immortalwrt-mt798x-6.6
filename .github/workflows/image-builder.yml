@@ -1,7 +1,7 @@
 #
 # https://github.com/P3TERX/Actions-OpenWrt
 #
-# File: .github/workflows/openwrt-bulder.yml
+# File: .github/workflows/image-builder.yml
 # Description: Build OpenWrt using GitHub Actions
 #
 # Copyright (c) 2019-2024 P3TERX <https://p3terx.com>
@@ -29,7 +29,6 @@ on:
       config_file:
         required: true
         type: string
-        default: .config
       diy_p1_sh:
         required: false
         type: string
@@ -78,12 +77,14 @@ env:
 jobs:
   build:
     runs-on: ubuntu-22.04
+    permissions:
+      contents: write
     outputs:
       repo_hash: ${{ steps.get-hash.outputs.repo_hash }}
 
     steps:
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v4
 
       - name: Initialization environment
         env:
@@ -146,54 +147,66 @@ jobs:
           cd openwrt
           echo -e "$(nproc) thread compile"
           make -j$(nproc) || make -j1 || make -j1 V=s
-          grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' > DEVICE_NAME
-          [ -s DEVICE_NAME ] && echo "DEVICE_NAME=$(cat DEVICE_NAME)" >> $GITHUB_ENV || echo "DEVICE_NAME=unknown" >> $GITHUB_ENV
+          
+          # 多设备模式：提取所有设备名（截断防超长）
+          DEVICES=$(grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' | tr '\n' '_' | sed 's/_$//' | cut -c1-50)
+          [ -n "$DEVICES" ] && echo "DEVICE_NAME=$DEVICES" >> $GITHUB_ENV || echo "DEVICE_NAME=multi-profile" >> $GITHUB_ENV
           echo "FILE_DATE=$(date +"%Y%m%d%H%M")" >> $GITHUB_ENV
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Check space usage
         if: (!cancelled())
         run: df -hT
 
       - name: Upload bin directory
-        uses: actions/upload-artifact@main
-        if: steps.compile.conclusion == 'success' && env.UPLOAD_BIN_DIR == 'true' && !cancelled()
+        uses: actions/upload-artifact@v4
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_BIN_DIR == 'true' && !cancelled()
         with:
           name: OpenWrt_bin_${{ env.DEVICE_NAME }}_${{ env.FILE_DATE }}
           path: openwrt/bin
 
       - name: Organize files
         id: organize
-        if: steps.compile.conclusion == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_FIRMWARE == 'true' && !cancelled()
         run: |
           cd openwrt/bin/targets/*/*
-          rm -rf packages
+          rm -rf packages *.buildinfo *.json *.manifest \
+            *uboot.fip *gpt.bin *preloader.bin *recovery.itb *kernel.bin 2>/dev/null || true
           echo "FIRMWARE=$PWD" >> $GITHUB_ENV
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Upload firmware directory
-        uses: actions/upload-artifact@main
-        if: steps.organize.conclusion == 'success' && !cancelled()
+        uses: actions/upload-artifact@v4
+        if: steps.organize.outputs.status == 'success' && !cancelled()
         with:
           name: OpenWrt_firmware_${{ env.DEVICE_NAME }}_${{ env.FILE_DATE }}
           path: ${{ env.FIRMWARE }}
 
       - name: Generate release tag
         id: tag
-        if: steps.compile.conclusion == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
+        if: steps.compile.outputs.status == 'success' && env.UPLOAD_RELEASE == 'true' && !cancelled()
         run: |
           echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_OUTPUT
           touch "${RELEASE_FILE}"
+          
+          # 生成设备列表
+          DEVICE_LIST=$(cd openwrt && grep '^CONFIG_TARGET.*DEVICE.*=y' .config | sed -r 's/.*DEVICE_(.*)=y/\1/' | sed 's/_/ /g' | tr '\n' ', ' | sed 's/, $//' || echo "multi-profile")
+          
           BADGE=$(mktemp)
           cat > "$BADGE" << EOF
           [![Build Time](https://img.shields.io/badge/build-$(date +"%Y--%m--%d_%H:%M")-brightgreen?logo=github)](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}) \
-          ![Device](https://img.shields.io/badge/device-$(echo ${{ env.DEVICE_NAME }} | sed 's/-/--/g')-blue) \
+          ![Device](https://img.shields.io/badge/device-multi--profile-blue) \
           [![Source Repo](https://img.shields.io/badge/source-repo-orange?logo=github)](${REPO_URL}/tree/${REPO_BRANCH}) \
           [![Commit](https://img.shields.io/badge/commit-$(git -C openwrt rev-parse --short HEAD)-yellow?logo=github)](${REPO_URL}/commit/$(git -C openwrt rev-parse HEAD))
+
+          📦 包含设备: ${DEVICE_LIST}
           EOF
           grep -q "!\[Badge\]" "${RELEASE_FILE}" && sed -i "/!\[Badge\]/r ${BADGE}" "${RELEASE_FILE}" && sed -i "/!\[Badge\]/d" "${RELEASE_FILE}" || sed -i "1r ${BADGE}" "${RELEASE_FILE}"
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Upload firmware to release
         uses: softprops/action-gh-release@v2
-        if: steps.tag.conclusion == 'success' && steps.organize.conclusion == 'success' && !cancelled()
+        if: steps.tag.outputs.status == 'success' && steps.organize.outputs.status == 'success' && !cancelled()
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
