@@ -17,6 +17,10 @@ on:
   repository_dispatch:
   workflow_dispatch:
 
+env:
+  UPDATER_ENABLED: true
+  UPDATER_DEFCONFIG: mtk_filogic.config
+
 jobs:
   build:
     uses: ./.github/workflows/image-builder.yml

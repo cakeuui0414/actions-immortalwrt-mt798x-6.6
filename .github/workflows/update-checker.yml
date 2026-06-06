@@ -60,10 +60,16 @@ jobs:
                 }
 
                 const workflowName = workflow.name || filename;
-                const match = workflow.env.REPO_URL.match(/github\.com[\/:]([^\/]+)\/([^\/\s]+?)(?:\.git)?(?:\/.*)?$/);
+                
+                const env = workflow.env || {};
+                const withParams = (workflow.jobs && workflow.jobs.build && workflow.jobs.build.with) ? workflow.jobs.build.with : {};
+                
+                const repoUrl = env.REPO_URL || withParams.repo_url;
+                const repoBranch = env.REPO_BRANCH || withParams.repo_branch;
+                const repoDefcfg = env.UPDATER_DEFCONFIG || withParams.config_file || null;
+
+                const match = repoUrl ? repoUrl.match(/github\.com[\/:]([^\/]+)\/([^\/\s]+?)(?:\.git)?(?:\/.*)?$/) : null;
                 const sourceRepo = match ? `${match[1]}/${match[2]}` : null;
-                const repoBranch = workflow.env.REPO_BRANCH;
-                const repoDefcfg = workflow.env && workflow.env.UPDATER_DEFCONFIG ? workflow.env.UPDATER_DEFCONFIG : null;
 
                 if (!(sourceRepo && repoBranch)) {
                     console.log('Invalid workflow: ' + file);
@@ -80,7 +86,7 @@ jobs:
             }
 
             console.log(result);
-            return result;
+            core.setOutput('result', JSON.stringify(result));
 
   check-and-trigger:
     needs: get-repo
