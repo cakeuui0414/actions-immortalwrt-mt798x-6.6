@@ -113,12 +113,19 @@ LuciTable.prototype = {
 		var lowerVal = valStr.toLowerCase();
 		var lowerKey = String(key).toLowerCase();
 
+		// 专门处理QoS速率的显示
+		if (lowerKey.indexOf('qos') !== -1 || lowerKey.indexOf('签约') !== -1 || lowerKey.indexOf('dl qos') !== -1 || lowerKey.indexOf('ul qos') !== -1) {
+			// 判断是下载还是上传，加上不同的方向类名[cite: 3]
+			var directionClass = (lowerKey.indexOf('dl') !== -1 || lowerKey.indexOf('download') !== -1) ? 'qos-dl' : 'qos-ul';
+			var qosSpan = E('span', { 'class': 'qos-rate-value ' + directionClass }, valStr);
+			container.appendChild(qosSpan);
+		}
 		// 1. 识别并转换运营商名
-		if (lowerKey.indexOf('提供商') !== -1 || lowerKey.indexOf('运营商') !== -1 || lowerKey.indexOf('provider') !== -1 || lowerKey.indexOf('operator') !== -1) {
+		else if (lowerKey.indexOf('提供商') !== -1 || lowerKey.indexOf('运营商') !== -1 || lowerKey.indexOf('provider') !== -1 || lowerKey.indexOf('operator') !== -1) {
 			var parsedOperator = parseProviderName(valStr);
 			container.appendChild(E('span', { 'class': 'miuix-badge badge-operator' }, parsedOperator));
 		}
-		// 2. 识别并格式化高亮 IMEI / ICCID / IMSI 信息卡，并加入点击遮罩隐藏功能 [cite: 24, 52]
+		// 2. 识别并格式化高亮 IMEI / ICCID / IMSI 信息卡，并加入点击遮罩隐藏功能
 		else if (lowerKey.indexOf('imei') !== -1 || lowerKey.indexOf('iccid') !== -1 || lowerKey.indexOf('imsi') !== -1) {
 			// 检查本地存储中的显示状态
 			var storageKey = 'miuix_secure_hide_' + key + '_' + valStr;
@@ -168,6 +175,13 @@ LuciTable.prototype = {
 				var value = data.value;
 				var full_name = data.full_name || key;
 				var extra_info = data.extra_info;
+				
+				// 【新增汉化逻辑】：拦截英文 QoS 标题并转为中文标题
+				if (full_name === 'Download QoS Rate') {
+					full_name = '下载速率';
+				} else if (full_name === 'Upload QoS Rate') {
+					full_name = '上传速率';
+				}
 				
 				var displayName = extra_info ? _(full_name) + ' (' + extra_info + ')' : _(full_name);
 				
@@ -360,7 +374,18 @@ return view.extend({
 			var grouped = {};
 			all_info.forEach(function(entry) {
 				if (entry.type === 'warning_message') return;
+				
 				var cName = entry['class'] || 'General';
+				var lowerKey = String(entry.key).toLowerCase();
+
+				// 如果检测到速率相关字段，强行把分配终点划入“网络信息”卡片中[cite: 3]
+				if (lowerKey.indexOf('qos') !== -1 || lowerKey.indexOf('签约') !== -1) {
+					var netClassName = all_info.find(function(e) {
+						return e['class'] && (e['class'].indexOf('网络') !== -1 || e['class'].indexOf('Network') !== -1);
+					});
+					cName = netClassName ? netClassName['class'] : '网络信息';
+				}
+
 				if (!grouped[cName]) grouped[cName] = [];
 				grouped[cName].push(entry);
 			});
@@ -417,7 +442,7 @@ return view.extend({
 			if (updateTimeElement) {
 				var d = new Date();
 				updateTimeElement.textContent = _('Last update') + ': ' + 
-					`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+					`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')} ${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 			}
 		}).catch(function(e) {
 			dom.content(infoContainer, E('div', { 'class': 'miuix-err' }, _('Error: %s').format(e.message)));

@@ -456,6 +456,22 @@ network_info()
 {
     m_debug  "Quectel network info"
 
+    # 签约速率
+    at_command='AT+CGEQOSRDP=1'
+    response_qos=$(at $at_port $at_command | grep "+CGEQOSRDP:")
+    if [ -n "$response_qos" ]; then
+        # 解析QoS数据: +CGEQOSRDP: 1,8,0,0,0,0,300000,75000
+        dl_rate=$(echo "$response_qos" | awk -F',' '{print $7}' | sed 's/\r//g')
+        ul_rate=$(echo "$response_qos" | awk -F',' '{print $8}' | sed 's/\r//g')
+        
+        # 转换为 Mbps
+        dl_rate_mbps=$(echo "$dl_rate/1000" | bc -l 2>/dev/null | awk '{printf "%.2f", $0}')
+        ul_rate_mbps=$(echo "$ul_rate/1000" | bc -l 2>/dev/null | awk '{printf "%.2f", $0}')
+        
+        add_plain_info_entry "DL QoS Rate" "${dl_rate_mbps} Mbps" "Download QoS Rate"
+        add_plain_info_entry "UL QoS Rate" "${ul_rate_mbps} Mbps" "Upload QoS Rate"
+    fi
+
     #Connect Status（连接状态）
 
     #Network Type（网络类型）

@@ -361,3 +361,54 @@
         user-select: none;
     }
 }
+
+.qos-rate-value {
+    color: #ff2d55 !important; /* 使用醒目的活力红 */
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    line-height: 1.35;
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 14px !important; /* 让高亮色框拥有舒适的内边距 */
+    border-radius: 12px !important; /* 调整为更精致的小圆角边框 */
+    margin-top: 4px;
+    box-sizing: border-box;
+}
+
+/* 依据类名，动态挂载不同的流向箭头 */
+.qos-rate-value.qos-dl::before {
+    content: "↓ ";
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 4px;
+}
+.qos-rate-value.qos-ul::before {
+    content: "↑ ";
+    font-size: 15px;
+    font-weight: 700;
+    margin-right: 4px;
+}
+
+/* 日间模式独立气泡背景 (排除标题) */
+@media (prefers-color-scheme: light) {
+    .qos-rate-value {
+        background: radial-gradient(circle at 15% 50%, rgba(255, 45, 85, 0.05), transparent 85%) !important;
+        border: 1px solid rgba(255, 45, 85, 0.08) !important;
+    }
+    .qos-rate-value.qos-dl::before, .qos-rate-value.qos-ul::before {
+        color: #ff9500; /* 日间模式下箭头使用显眼的橙色 */
+    }
+}
+
+/* 夜间模式独立气泡背景 */
+@media (prefers-color-scheme: dark) {
+    .qos-rate-value {
+        color: #ff375f !important; /* 夜间模式使用稍亮一点的粉红 */
+        background: radial-gradient(circle at 15% 50%, rgba(255, 55, 95, 0.1), transparent 85%) !important;
+        border: 1px solid rgba(255, 55, 95, 0.15) !important;
+    }
+    .qos-rate-value.qos-dl::before, .qos-rate-value.qos-ul::before {
+        color: #ff9f0a; /* 夜间模式下箭头使用亮橙色 */
+    }
+}
