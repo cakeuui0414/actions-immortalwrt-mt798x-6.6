@@ -45,6 +45,10 @@ git clone https://github.com/kenzok8/golang -b 1.26 feeds/packages/lang/golang
 
 git clone https://github.com/rchen14b/luci-theme-glass.git package/luci-theme-glass
 
+cp "$GITHUB_WORKSPACE"/QModem/qmodem-next.css feeds/qmodem/luci/luci-app-qmodem-next/htdocs/luci-static/resources/qmodem/qmodem-next.css
+cp "$GITHUB_WORKSPACE"/QModem/overview.js feeds/qmodem/luci/luci-app-qmodem-next/htdocs/luci-static/resources/view/qmodem/overview.js
+cp "$GITHUB_WORKSPACE"/QModem/quectel.sh feeds/qmodem/application/qmodem/files/usr/share/qmodem/vendor/quectel.sh
+
 # compile and build
 # make download -j8
 # make -j$(nproc)
