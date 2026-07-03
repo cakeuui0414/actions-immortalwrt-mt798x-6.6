@@ -11,6 +11,47 @@
     --mx-radius-small: 14px;
 }
 
+/* 夜间模式支持 */
+@media (prefers-color-scheme: dark) {
+    :root {
+        --mx-bg: #1c1c1e;
+        --mx-card-bg: #2c2c2e;
+        --mx-primary: #0a84ff;
+        --mx-text-title: #ffffff;
+        --mx-text-body: #f2f2f7;
+        --mx-text-sub: #8e8e93;
+    }
+    
+    /* 夜间模式下的特定颜色调整 */
+    .badge-success { background: #223d2a !important; color: #30d158 !important; }
+    .badge-error { background: #461e27 !important; color: #ff453a !important; }
+    .badge-primary { background: #223847 !important; color: #0a84ff !important; }
+    .badge-operator {
+        background: linear-gradient(135deg, #2a3b4d, #1e2c3d) !important;
+        color: #0a84ff !important;
+        border: 1px solid rgba(10, 132, 255, 0.2) !important;
+        box-shadow: 0 2px 8px rgba(10, 132, 255, 0.1);
+    }
+    .miuix-code-text {
+        background: #2a3b4d !important;
+        color: #0a84ff !important;
+        border: 1px solid rgba(10, 132, 255, 0.2) !important;
+    }
+    .miuix-progress-track { background: #424245 !important; }
+    .miuix-native-select {
+        background: #3a3a3c !important;
+        border: 1px solid #424245 !important;
+        color: #f2f2f7;
+    }
+    .miuix-err {
+        background: #461e27;
+        color: #ff453a;
+    }
+    .miuix-card {
+        box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1) !important;
+    }
+}
+
 /* 全局底层背景与排版 */
 .miuix-app-layout {
     background-color: var(--mx-bg) !important;
@@ -58,6 +99,14 @@
 .bg-green { background-color: #e8f7ec; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2311b13b'%3E%3Cpath d='M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 7h6v2H9V7zm8 11H7v-2h10v2zm0-4H7v-2h10v2z'/%3E%3C/svg%3E"); }
 .bg-orange { background-color: #fff3e0; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff9100'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86z'/%3E%3C/svg%3E"); }
 .bg-purple { background-color: #f3e5f5; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ab47bc'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86z'/%3E%3C/svg%3E"); }
+
+/* 夜间模式图标适配 */
+@media (prefers-color-scheme: dark) {
+    .bg-blue { background-color: #223847; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%230a84ff'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z'/%3E%3C/svg%3E"); }
+    .bg-green { background-color: #223d2a; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%2330d158'%3E%3Cpath d='M18 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zM9 7h6v2H9V7zm8 11H7v-2h10v2zm0-4H7v-2h10v2z'/%3E%3C/svg%3E"); }
+    .bg-orange { background-color: #462c1f; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23ff9f0a'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86z'/%3E%3C/svg%3E"); }
+    .bg-purple { background-color: #3d2f47; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%23bf5af2'%3E%3Cpath d='M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93s3.05-7.44 7-7.93v15.86z'/%3E%3C/svg%3E"); }
+}
 
 .miuix-card-title-text {
     font-size: 20px !important;
@@ -152,6 +201,23 @@
     border: 1px solid rgba(0, 118, 255, 0.08) !important;
     letter-spacing: 0.3px;
     display: inline-block;
+    cursor: pointer;
+}
+
+/* 夜间模式代码文本样式 */
+@media (prefers-color-scheme: dark) {
+    .miuix-code-text {
+        font-family: "SF Mono", "Courier New", Consolas, monospace !important;
+        font-size: 14.5px !important;
+        color: #0a84ff !important;
+        background: #2a3b4d !important;
+        padding: 4px 10px !important;
+        border-radius: 8px !important;
+        border: 1px solid rgba(10, 132, 255, 0.2) !important;
+        letter-spacing: 0.3px;
+        display: inline-block;
+        cursor: pointer;
+    }
 }
 
 /* 顶部选择器 */
@@ -163,6 +229,22 @@
     font-size: 15px;
     outline: none;
     width: 100%;
+    color: var(--mx-text-body);
+}
+
+/* 夜间模式选择器样式 */
+@media (prefers-color-scheme: dark) {
+    .miuix-native-select {
+        border: 1px solid #424245 !important;
+        background: #3a3a3c !important;
+        color: #f2f2f7;
+    }
+    
+    /* 修复选择器选项的夜间模式 */
+    select option {
+        background-color: #3a3a3c !important;
+        color: #f2f2f7 !important;
+    }
 }
 
 .miuix-time-log { 
@@ -204,6 +286,19 @@
     100% { transform: rotate(360deg); }
 }
 
+/* 夜间模式加载动画 */
+@media (prefers-color-scheme: dark) {
+    .miuix-spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid rgba(10, 132, 255, 0.1);
+        border-top: 4px solid var(--mx-primary);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin-bottom: 16px;
+    }
+}
+
 /* 错误提示 */
 .miuix-err {
     background: #fdebee;
@@ -212,6 +307,14 @@
     border-radius: var(--mx-radius-small);
     text-align: center;
     margin: 20px 0;
+}
+
+/* 夜间模式错误提示 */
+@media (prefers-color-scheme: dark) {
+    .miuix-err {
+        background: #461e27;
+        color: #ff453a;
+    }
 }
 
 /* 选择器卡片 */
@@ -246,4 +349,15 @@
 .miuix-code-text:hover {
     filter: brightness(0.9);
     transition: all 0.2s ease;
+} 
+
+/* 夜间模式敏感信息样式 */
+@media (prefers-color-scheme: dark) {
+    .miuix-code-text.miuix-secure-hide {
+        -webkit-text-security: disc !important;
+        text-security: disc !important;
+        opacity: 0.65;
+        letter-spacing: 2px !important;
+        user-select: none;
+    }
 }

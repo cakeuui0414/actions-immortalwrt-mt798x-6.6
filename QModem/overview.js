@@ -120,16 +120,25 @@ LuciTable.prototype = {
 		}
 		// 2. 识别并格式化高亮 IMEI / ICCID / IMSI 信息卡，并加入点击遮罩隐藏功能 [cite: 24, 52]
 		else if (lowerKey.indexOf('imei') !== -1 || lowerKey.indexOf('iccid') !== -1 || lowerKey.indexOf('imsi') !== -1) {
-			// 创建一个包裹长数字的 span 元素，默认加上 miuix-secure-hide 类名（代表隐藏状态）
+			// 检查本地存储中的显示状态
+			var storageKey = 'miuix_secure_hide_' + key + '_' + valStr;
+			var isHidden = localStorage.getItem(storageKey) !== 'false'; // 默认为隐藏状态
+			
+			// 创建一个包裹长数字的 span 元素
 			var secureSpan = E('span', { 
-				'class': 'miuix-code-text miuix-secure-hide',
+				'class': 'miuix-code-text ' + (isHidden ? 'miuix-secure-hide' : ''),
 				'style': 'cursor: pointer;', // 鼠标悬停时变成小手提示可点击
-				'title': '点击显示/隐藏内容'
+				'title': '点击显示/隐藏内容',
+				'data-storage-key': storageKey,
+				'data-original-value': valStr
 			}, valStr);
 
 			// 绑定点击事件：点击时自动切换隐藏/明文状态
-			secureSpan.addEventListener('click', function() {
+			secureSpan.addEventListener('click', function(e) {
+				e.stopPropagation(); // 防止事件冒泡到父元素
 				this.classList.toggle('miuix-secure-hide');
+				var isCurrentlyHidden = this.classList.contains('miuix-secure-hide');
+				localStorage.setItem(this.getAttribute('data-storage-key'), isCurrentlyHidden.toString());
 			});
 
 			container.appendChild(secureSpan);
