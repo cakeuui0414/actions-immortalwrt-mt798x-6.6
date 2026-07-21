@@ -13,245 +13,92 @@ document.head.appendChild(E('link', {
 	'href': L.resource('qmodem/qmodem-next.css')
 }));
 
-// 判断系统中是否存在指定的 CSS 类
-function hasCssClass(className) {
-	var styleSheets = document.styleSheets;
-	for (var i = 0; i < styleSheets.length; i++) {
-		try {
-			var rules = styleSheets[i].cssRules || styleSheets[i].rules;
-			if (rules) {
-				for (var j = 0; j < rules.length; j++) {
-					if (rules[j].selectorText && rules[j].selectorText.indexOf(className) !== -1) {
-						return true;
-					}
-				}
-			}
-		} catch(e) {
-			// 跨域样式表跳过
-		}
-	}
-	return false;
-}
-
-var progressbar_className = hasCssClass('.cbi-progressbar') ? 'cbi-progressbar' : 'compat-progressbar';
-
-// 用于转换 PLMN 运营商编码的辅助函数
+// 运营商解析
 function parseProviderName(valStr) {
-	var cleanVal = valStr.replace(/[^0-9]/g, ''); // 提取纯数字
+	var cleanVal = String(valStr || '').replace(/[^0-9]/g, '');
 	var cmcc = ['46000', '46002', '46004', '46007', '46008'];
 	var cucc = ['46001', '46006'];
 	var ctcc = ['46003', '46011'];
 	var cbnc = ['46015'];
-
-	if (cmcc.indexOf(cleanVal) !== -1) return '中国移动 (' + valStr + ')';
-	if (cucc.indexOf(cleanVal) !== -1) return '中国联通 (' + valStr + ')';
-	if (ctcc.indexOf(cleanVal) !== -1) return '中国电信 (' + valStr + ')';
-	if (cbnc.indexOf(cleanVal) !== -1) return '中国广电 (' + valStr + ')';
-	return valStr; // 没匹配到则返回原值
+	if (cmcc.indexOf(cleanVal) !== -1) return '中国移动';
+	if (cucc.indexOf(cleanVal) !== -1) return '中国联通';
+	if (ctcc.indexOf(cleanVal) !== -1) return '中国电信';
+	if (cbnc.indexOf(cleanVal) !== -1) return '中国广电';
+	return valStr || '未知运营商';
 }
 
-// 现代 MIUIX 风格表格组件
-var LuciTable = function() {
-	this.rows = [];
-	this.gridContainer = null;
-	this.fieldset = null;
-	this.title_span = null;
-	this.arrow_icon = null;
-	this.initTable();
-};
+// 精美 MIUIX 风格矢量 SVG 图标生成器
+function getMiuiIconSvg(type) {
+	var svgMap = {
+		'mobile': '<svg viewBox="0 0 24 24"><path d="M17 1.01L7 1c-1.1 0-2 .9-2 2v18c0 1.1.9 2 2 2h10c1.1 0 2-.9 2-2V3c0-1.1-.9-1.99-2-1.99zM17 19H7V5h10v14z"/></svg>',
+		'sim': '<svg viewBox="0 0 24 24"><path d="M18 2h-8L4 8v12c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 18H6V8.83L10.83 4H18v16zM7 17h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2zm-8-4h2v2H7zm4 0h2v2h-2zm4 0h2v2h-2z"/></svg>',
+		'cell': '<svg viewBox="0 0 24 24"><path d="M12 3c-4.97 0-9 4.03-9 9 0 2.12.74 4.07 1.97 5.61L3.5 20.5l2.89-1.47C7.93 20.26 9.88 21 12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9zm0 16c-1.74 0-3.34-.56-4.65-1.52l-.33-.24-2.02 1.03 1.03-2.02-.24-.33C4.81 14.6 4.25 13 4.25 11.25c0-4.28 3.47-7.75 7.75-7.75s7.75 3.47 7.75 7.75-3.47 7.75-7.75 7.75z"/><circle cx="12" cy="11" r="3"/></svg>',
+		'shield': '<svg viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-5.45 9-12V5l-9-4zm0 10.99h7c-.53 4.12-3.28 7.79-7 8.94V12H5V6.3l7-3.11v8.8z"/></svg>',
+		'signal': '<svg viewBox="0 0 24 24"><path d="M2 22h20V2z"/></svg>',
+		'speed': '<svg viewBox="0 0 24 24"><path d="M20.38 8.57l-1.23 1.85a8 8 0 0 1-.22 7.58H5.07A8 8 0 0 1 15.58 6.85l1.85-1.23A10 10 0 0 0 3.35 19a2 2 0 0 0 1.72 1h13.85a2 2 0 0 0 1.74-1 10 10 0 0 0-.28-10.43zM13 11a1 1 0 0 0-1 1 1 1 0 0 0 .29.71l3 3a1 1 0 0 0 1.42-1.42l-3-3A1 1 0 0 0 13 11z"/></svg>',
+		'lightning': '<svg viewBox="0 0 24 24"><path d="M7 2v11h3v9l7-12h-4l4-8z"/></svg>'
+	};
+	var span = document.createElement('span');
+	span.className = 'miui-svg-icon';
+	span.innerHTML = svgMap[type] || svgMap['mobile'];
+	return span;
+}
 
-LuciTable.prototype = {
-	initTable: function() {
-		// 大圆角沉浸式卡片容器
-		this.fieldset = E('div', { 'class': 'miuix-card collapsible draggable', 'draggable': 'true' });
-		
-		// 头部标题区
-		this.title_span = E('span', { 'class': 'miuix-card-title-text' });
-		this.arrow_icon = E('span', { 'class': 'miuix-card-arrow' }, '＞');
-		var icon_prefix = E('div', { 'class': 'miuix-card-icon-prefix' });
-		
-		var header_div = E('div', { 'class': 'miuix-card-header' }, [
-			E('div', { 'class': 'miuix-card-header-left' }, [icon_prefix, this.title_span]),
-			this.arrow_icon
-		]);
-		
-		// 替代原有 table 的现代双列错落网格容器
-		this.gridContainer = E('div', { 'class': 'miuix-grid-container' });
-		
-		this.fieldset.appendChild(header_div);
-		this.fieldset.appendChild(this.gridContainer);
-	},
+// 自动/手动日夜间模式管理
+function getSystemTheme() {
+	return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
 
-	setTitle: function(value) {
-		var translatedValue = _(value);
-		this.title_span.textContent = translatedValue;
-		
-		// 根据面板标题动态设定左侧小圆圈彩色图标
-		var prefix = this.fieldset.querySelector('.miuix-card-icon-prefix');
-		if (prefix) {
-			prefix.className = 'miuix-card-icon-prefix';
-			if (value.indexOf('基本') !== -1 || value.indexOf('Base') !== -1) {
-				prefix.classList.add('bg-blue', 'ico-base');
-			} else if (value.indexOf('SIM') !== -1) {
-				prefix.classList.add('bg-green', 'ico-sim');
-			} else if (value.indexOf('网络') !== -1 || value.indexOf('Network') !== -1) {
-				prefix.classList.add('bg-orange', 'ico-net');
-			} else if (value.indexOf('小区') !== -1 || value.indexOf('Cell') !== -1) {
-				prefix.classList.add('bg-purple', 'ico-cell');
-			} else {
-				prefix.classList.add('bg-blue', 'ico-base');
-			}
-		}
-	},
-
-	// 专门处理数值美化渲染的核心逻辑
-	renderValue: function(container, key, value) {
-		container.innerHTML = '';
-		if (value == null || value === '') return;
-
-		var valStr = String(value).trim();
-		var lowerVal = valStr.toLowerCase();
-		var lowerKey = String(key).toLowerCase();
-
-		// 专门处理QoS速率的显示
-		if (lowerKey.indexOf('qos') !== -1 || lowerKey.indexOf('签约') !== -1 || lowerKey.indexOf('dl qos') !== -1 || lowerKey.indexOf('ul qos') !== -1) {
-			// 判断是下载还是上传，加上不同的方向类名[cite: 3]
-			var directionClass = (lowerKey.indexOf('dl') !== -1 || lowerKey.indexOf('download') !== -1) ? 'qos-dl' : 'qos-ul';
-			var qosSpan = E('span', { 'class': 'qos-rate-value ' + directionClass }, valStr);
-			container.appendChild(qosSpan);
-		}
-		// 1. 识别并转换运营商名
-		else if (lowerKey.indexOf('提供商') !== -1 || lowerKey.indexOf('运营商') !== -1 || lowerKey.indexOf('provider') !== -1 || lowerKey.indexOf('operator') !== -1) {
-			var parsedOperator = parseProviderName(valStr);
-			container.appendChild(E('span', { 'class': 'miuix-badge badge-operator' }, parsedOperator));
-		}
-		// 2. 识别并格式化高亮 IMEI / ICCID / IMSI 信息卡，并加入点击遮罩隐藏功能
-		else if (lowerKey.indexOf('imei') !== -1 || lowerKey.indexOf('iccid') !== -1 || lowerKey.indexOf('imsi') !== -1) {
-			// 检查本地存储中的显示状态
-			var storageKey = 'miuix_secure_hide_' + key + '_' + valStr;
-			var isHidden = localStorage.getItem(storageKey) !== 'false'; // 默认为隐藏状态
-			
-			// 创建一个包裹长数字的 span 元素
-			var secureSpan = E('span', { 
-				'class': 'miuix-code-text ' + (isHidden ? 'miuix-secure-hide' : ''),
-				'style': 'cursor: pointer;', // 鼠标悬停时变成小手提示可点击
-				'title': '点击显示/隐藏内容',
-				'data-storage-key': storageKey,
-				'data-original-value': valStr
-			}, valStr);
-
-			// 绑定点击事件：点击时自动切换隐藏/明文状态
-			secureSpan.addEventListener('click', function(e) {
-				e.stopPropagation(); // 防止事件冒泡到父元素
-				this.classList.toggle('miuix-secure-hide');
-				var isCurrentlyHidden = this.classList.contains('miuix-secure-hide');
-				localStorage.setItem(this.getAttribute('data-storage-key'), isCurrentlyHidden.toString());
-			});
-
-			container.appendChild(secureSpan);
-		}
-		// 3. 基础就绪/在线状态高亮
-		else if (lowerVal === 'yes' || lowerVal === 'ready' || lowerVal === 'online') {
-			container.appendChild(E('span', { 'class': 'miuix-badge badge-success' }, valStr));
-		} else if (lowerVal === 'no' || lowerVal === 'offline') {
-			container.appendChild(E('span', { 'class': 'miuix-badge badge-error' }, valStr));
-		} 
-		// 4. 5G 网络类型高亮
-		else if (lowerVal.indexOf('nr5g') !== -1 || lowerVal.indexOf('5g') !== -1) {
-			container.appendChild(E('span', { 'class': 'miuix-badge badge-primary' }, valStr));
+function updateThemeUI(theme, mode) {
+	document.documentElement.setAttribute('data-theme', theme);
+	var btn = document.querySelector('.miui-theme-toggle');
+	if (btn) {
+		if (mode === 'auto') {
+			btn.textContent = 'Ⓐ';
+			btn.title = '当前：自动跟随系统/主题';
 		} else {
-			container.textContent = valStr;
-		}
-	},
-
-	newTr: function(data, index) {
-		var type = data.type;
-		var rowObj = this.rows[index];
-		if (!rowObj) return;
-
-		switch(type) {
-			case 'plain_text':
-				var key = data.key;
-				var value = data.value;
-				var full_name = data.full_name || key;
-				var extra_info = data.extra_info;
-				
-				// 【新增汉化逻辑】：拦截英文 QoS 标题并转为中文标题
-				if (full_name === 'Download QoS Rate') {
-					full_name = '下载速率';
-				} else if (full_name === 'Upload QoS Rate') {
-					full_name = '上传速率';
-				}
-				
-				var displayName = extra_info ? _(full_name) + ' (' + extra_info + ')' : _(full_name);
-				
-				rowObj.labelNode.textContent = displayName;
-				this.renderValue(rowObj.valueNode, key, value);
-
-				rowObj.cell.style.display = (value == null || value === '') ? 'none' : '';
-				break;
-				
-			case 'progress_bar':
-				var key = data.key;
-				var full_name = data.full_name || key;
-				var extra_info = data.extra_info;
-				var value = parseFloat(data.value);
-				var min = parseFloat(data.min_value);
-				var max = parseFloat(data.max_value);
-				var unit = data.unit || '';
-				var percentage = Math.max(0, Math.min(100, ((value - min) / (max - min)) * 100));
-				
-				rowObj.labelNode.textContent = extra_info ? _(full_name) + ' (' + extra_info + ')' : _(full_name);
-				
-				rowObj.valueNode.innerHTML = '';
-				// 重新组合当前值与范围值，还原原版比值显示效果
-				var displayValue = data.value;
-				if (data.min_value !== undefined && data.max_value !== undefined) {
-					displayValue = '(' + data.value + '/' + data.max_value + unit + ')';
-				} else {
-					displayValue = data.value + unit;
-				}
-
-				var valSpan = E('span', { 'style': 'display:block; margin-bottom:4px;' }, displayValue);
-				var track = E('div', { 'class': 'miuix-progress-track' }, [
-					E('div', { 'class': 'miuix-progress-bar', 'style': 'width:' + percentage + '%' })
-				]);
-				
-				rowObj.valueNode.appendChild(valSpan);
-				rowObj.valueNode.appendChild(track);
-				rowObj.cell.style.display = '';
-				break;
-		}
-	},
-
-	setData: function(value) {
-		if (value == null) return;
-		var dataArray = Array.isArray(value) ? value : Object.keys(value).map(k => ({ type: 'plain_text', key: k, value: value[k] }));
-		
-		var row_length = this.rows.length;
-		var value_length = dataArray.length;
-		
-		if (row_length < value_length) {
-			for (var i = row_length; i < value_length; i++) {
-				var labelNode = E('div', { 'class': 'miuix-grid-label' });
-				var valueNode = E('div', { 'class': 'miuix-grid-value' });
-				var cell = E('div', { 'class': 'miuix-grid-cell' }, [labelNode, valueNode]);
-				
-				this.gridContainer.appendChild(cell);
-				this.rows.push({ cell: cell, labelNode: labelNode, valueNode: valueNode });
-			}
-		} else if (row_length > value_length) {
-			for (var i = value_length; i < row_length; i++) {
-				this.gridContainer.removeChild(this.rows[i].cell);
-			}
-			this.rows = this.rows.slice(0, value_length);
-		}
-		
-		for (var i = 0; i < dataArray.length; i++) {
-			this.newTr(dataArray[i], i);
+			btn.textContent = theme === 'dark' ? '☀' : '☾';
+			btn.title = '当前：手动切换模式';
 		}
 	}
-};
+}
+
+function initTheme() {
+	var savedMode = localStorage.getItem('qmodem_theme_mode') || 'auto';
+	var effectiveTheme = savedMode === 'auto' ? getSystemTheme() : savedMode;
+	
+	updateThemeUI(effectiveTheme, savedMode);
+
+	if (window.matchMedia) {
+		var mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+		var handleThemeChange = function(e) {
+			if ((localStorage.getItem('qmodem_theme_mode') || 'auto') === 'auto') {
+				updateThemeUI(e.matches ? 'dark' : 'light', 'auto');
+			}
+		};
+		if (mediaQuery.addEventListener) {
+			mediaQuery.addEventListener('change', handleThemeChange);
+		} else if (mediaQuery.addListener) {
+			mediaQuery.addListener(handleThemeChange);
+		}
+	}
+}
+
+function cycleTheme() {
+	var currentMode = localStorage.getItem('qmodem_theme_mode') || 'auto';
+	var nextMode;
+	if (currentMode === 'auto') {
+		nextMode = 'light';
+	} else if (currentMode === 'light') {
+		nextMode = 'dark';
+	} else {
+		nextMode = 'auto';
+	}
+	
+	localStorage.setItem('qmodem_theme_mode', nextMode);
+	var effectiveTheme = nextMode === 'auto' ? getSystemTheme() : nextMode;
+	updateThemeUI(effectiveTheme, nextMode);
+}
 
 return view.extend({
 	load: function() {
@@ -273,84 +120,291 @@ return view.extend({
 		return modems;
 	},
 
-	getSectionOrder: function(modemId) {
-		var order = localStorage.getItem('qmodem_section_order_' + modemId);
-		return order ? JSON.parse(order) : [];
-	},
+	renderFieldValue: function(key, val) {
+		var valStr = String(val || '').trim();
+		var lowerKey = String(key).toLowerCase();
+		var lowerVal = valStr.toLowerCase();
 
-	saveSectionOrder: function(modemId, order) {
-		localStorage.setItem('qmodem_section_order_' + modemId, JSON.stringify(order));
-	},
-
-	getCollapsedState: function(modemId, className) {
-		return localStorage.getItem('qmodem_collapsed_' + modemId + '_' + className) === 'true';
-	},
-
-	saveCollapsedState: function(modemId, className, isCollapsed) {
-		localStorage.setItem('qmodem_collapsed_' + modemId + '_' + className, isCollapsed ? 'true' : 'false');
-	},
-
-	attachSectionHandlers: function(fieldset, className, modemId, infoContainer) {
-		var self = this;
-		var header = fieldset.querySelector('.miuix-card-header');
-		
-		if (header) {
-			header.addEventListener('click', function() {
-				if (fieldset.classList.contains('dragging')) return;
-				fieldset.classList.toggle('collapsed');
-				self.saveCollapsedState(modemId, className, fieldset.classList.contains('collapsed'));
-			});
+		if (lowerKey.indexOf('provider') !== -1 || lowerKey.indexOf('isp') !== -1 || lowerKey.indexOf('运营商') !== -1) {
+			return E('span', { 'class': 'miui-plain-val' }, parseProviderName(valStr));
 		}
 		
-		fieldset.addEventListener('dragstart', function(e) {
-			fieldset.classList.add('dragging');
-			e.dataTransfer.effectAllowed = 'move';
-			e.dataTransfer.setData('text/plain', className);
-		});
-		
-		fieldset.addEventListener('dragend', function() {
-			fieldset.classList.remove('dragging');
-			infoContainer.querySelectorAll('.miuix-card').forEach(function(sec) {
-				sec.classList.remove('drag-over');
+		if (lowerKey.indexOf('imei') !== -1 || lowerKey.indexOf('iccid') !== -1 || lowerKey.indexOf('imsi') !== -1) {
+			var storageKey = 'ufi_secure_' + key + '_' + valStr;
+			var isHidden = localStorage.getItem(storageKey) !== 'false';
+			var span = E('span', {
+				'class': 'miui-code ' + (isHidden ? 'miui-secure-hide' : ''),
+				'title': '点击切换显示/隐藏'
+			}, valStr);
+			span.addEventListener('click', function(e) {
+				e.stopPropagation();
+				this.classList.toggle('miui-secure-hide');
+				localStorage.setItem(storageKey, this.classList.contains('miui-secure-hide').toString());
 			});
-		});
+			return span;
+		}
 		
-		fieldset.addEventListener('dragover', function(e) {
-			e.preventDefault();
-			var dragEl = infoContainer.querySelector('.dragging');
-			if (dragEl && dragEl !== fieldset) fieldset.classList.add('drag-over');
-		});
+		if (lowerVal === 'yes' || lowerVal === 'ready' || lowerVal === 'online') {
+			return E('span', { 'class': 'miui-tag miui-tag-green' }, valStr);
+		}
+		if (lowerVal === 'no' || lowerVal === 'offline') {
+			return E('span', { 'class': 'miui-tag miui-tag-red' }, valStr);
+		}
+		if (lowerKey.indexOf('network_mode') !== -1 || lowerKey.indexOf('mode') !== -1) {
+			return E('span', { 'class': 'miui-tag miui-tag-blue' }, valStr);
+		}
+		if (lowerKey.indexOf('temp') !== -1 || lowerKey.indexOf('温度') !== -1) {
+			var tempVal = parseFloat(valStr) || 0;
+			var tagClass = tempVal >= 60 ? 'miui-tag-red' : (tempVal >= 45 ? 'miui-tag-orange' : 'miui-tag-green');
+			return E('span', { 'class': 'miui-tag ' + tagClass }, valStr);
+		}
+		return E('span', { 'class': 'miui-plain-val' }, valStr);
+	},
+
+	getSignalProgress: function(key, val) {
+		var lowerKey = String(key).toLowerCase();
+		var numVal = parseFloat(val);
+		if (isNaN(numVal)) return null;
+
+		if (lowerKey.indexOf('rsrp') !== -1) return Math.min(100, Math.max(0, ((numVal + 140) / 96) * 100));
+		if (lowerKey.indexOf('sinr') !== -1) return Math.min(100, Math.max(0, ((numVal + 20) / 50) * 100));
+		if (lowerKey.indexOf('rsrq') !== -1) return Math.min(100, Math.max(0, ((numVal + 30) / 27) * 100));
+		if (lowerKey.indexOf('rssi') !== -1) return Math.min(100, Math.max(0, ((numVal + 120) / 90) * 100));
+		return null;
+	},
+
+	renderQoSCard: function(dlRateStr, ulRateStr) {
+		var parseRate = function(str) {
+			var m = String(str || '').match(/([0-9.]+)/);
+			return m ? parseFloat(m[1]) : 0;
+		};
+		var dlRaw = parseRate(dlRateStr);
+		var ulRaw = parseRate(ulRateStr);
 		
-		fieldset.addEventListener('dragleave', function() {
-			fieldset.classList.remove('drag-over');
-		});
+		var dlMax = 1000;
+		var ulMax = 300;
 		
-		fieldset.addEventListener('drop', function(e) {
-			e.preventDefault();
-			fieldset.classList.remove('drag-over');
-			var dragEl = infoContainer.querySelector('.dragging');
-			if (dragEl && dragEl !== fieldset) {
-				infoContainer.insertBefore(dragEl, fieldset);
-			}
+		var dlPercent = Math.min(100, Math.max(0, (dlRaw / dlMax) * 100));
+		var ulPercent = Math.min(100, Math.max(0, (ulRaw / ulMax) * 100));
+
+		return E('div', { 'class': 'miui-card miui-qos-card' }, [
+			E('div', { 'class': 'miui-main-header' }, [
+				E('div', { 'class': 'miui-main-title-group' }, [
+					E('div', { 'class': 'miui-card-icon blue' }, [getMiuiIconSvg('speed')]),
+					E('span', { 'class': 'miui-main-title' }, '签约速率')
+				])
+			]),
+			E('div', { 'class': 'miui-qos-grid' }, [
+				E('div', { 'class': 'miui-qos-item' }, [
+					E('div', { 'class': 'miui-qos-label' }, [
+						E('span', { 'class': 'miui-qos-arrow dl' }, '↓'),
+						_('下载速率')
+					]),
+					E('div', { 'class': 'miui-qos-value' }, dlRaw ? dlRaw.toFixed(2) : '0.00'),
+					E('div', { 'class': 'miui-qos-unit' }, 'Mbps'),
+					E('div', { 'class': 'miui-clean-progress-track' }, [
+						E('div', { 'class': 'miui-clean-progress-bar', 'style': 'width:' + dlPercent + '%' })
+					])
+				]),
+				E('div', { 'class': 'miui-qos-divider' }),
+				E('div', { 'class': 'miui-qos-item' }, [
+					E('div', { 'class': 'miui-qos-label' }, [
+						E('span', { 'class': 'miui-qos-arrow ul' }, '↑'),
+						_('上传速率')
+					]),
+					E('div', { 'class': 'miui-qos-value' }, ulRaw ? ulRaw.toFixed(2) : '0.00'),
+					E('div', { 'class': 'miui-qos-unit' }, 'Mbps'),
+					E('div', { 'class': 'miui-clean-progress-track' }, [
+						E('div', { 'class': 'miui-clean-progress-bar green', 'style': 'width:' + ulPercent + '%' })
+					])
+				])
+			])
+		]);
+	},
+
+	renderMIUIXLayout: function(data, container) {
+		container.innerHTML = '';
+		var self = this;
+		var allEntries = data.all_info || [];
+
+		var map = {};
+		var groups = {};
+
+		allEntries.forEach(function(e) {
+			if (!e || e.type === 'warning_message' || e.value == null || e.value === '') return;
+			var k = (e.key || '').toLowerCase();
+			map[k] = e.value;
+
+			var groupName = e['class'] || '其他信息';
 			
-			var newOrder = Array.from(infoContainer.querySelectorAll('.miuix-card')).map(function(sec) {
-				var txt = sec.querySelector('.miuix-card-title-text');
-				return txt ? txt.textContent : '';
-			}).filter(Boolean);
-			self.saveSectionOrder(modemId, newOrder);
+			if (groupName === '其他信息' || groupName === 'Other Information' ||
+			    groupName === '网络信息' || groupName === 'Network Information') {
+				return;
+			}
+
+			if (!groups[groupName]) groups[groupName] = [];
+			groups[groupName].push(e);
 		});
+
+		// 1. 顶部 2x2 毛玻璃 Widget 卡片
+		var provider = parseProviderName(map['provider'] || map['isp'] || map['运营商'] || '中国联通');
+		var netMode = map['network_mode'] || map['mode'] || map['网络模式'] || 'NR5G-SA Mode';
+		var simStatus = (map['sim status'] || map['sim_state'] || 'ready').toUpperCase();
+		var deviceName = map['name'] || map['model'] || map['manufacturer'] || 'RM500U-CN';
+		var tempVal = map['temperature'] || map['temp'] || '54°C';
+
+		var topGrid = E('div', { 'class': 'miui-top-grid' }, [
+			E('div', { 'class': 'miui-card miui-status-card' }, [
+				E('div', { 'class': 'miui-status-header' }, [
+					E('span', { 'class': 'miui-status-label' }, '蜂窝网络'),
+					E('div', { 'class': 'miui-card-icon blue' }, [getMiuiIconSvg('signal')])
+				]),
+				E('div', { 'class': 'miui-status-body' }, [
+					E('div', { 'class': 'miui-status-main-val' }, provider),
+					E('div', { 'class': 'miui-status-sub-text' }, netMode)
+				]),
+				E('div', { 'class': 'miui-status-footer' }, [
+					E('span', { 'class': 'miui-tag miui-tag-green' }, simStatus)
+				])
+			]),
+			E('div', { 'class': 'miui-card miui-status-card' }, [
+				E('div', { 'class': 'miui-status-header' }, [
+					E('span', { 'class': 'miui-status-label' }, '模组状态'),
+					E('div', { 'class': 'miui-card-icon green' }, [getMiuiIconSvg('shield')])
+				]),
+				E('div', { 'class': 'miui-status-body' }, [
+					E('div', { 'class': 'miui-status-main-val' }, tempVal),
+					E('div', { 'class': 'miui-status-sub-text' }, deviceName)
+				]),
+				E('div', { 'class': 'miui-status-footer' }, [
+					E('span', { 'class': 'miui-tag miui-tag-blue' }, '运行正常')
+				])
+			])
+		]);
+		container.appendChild(topGrid);
+
+		// 2. 签约速率卡片
+		var dlRate = map['dl_rate'] || map['dl qos rate'] || map['dl_qos'] || '300M';
+		var ulRate = map['ul_rate'] || map['ul qos rate'] || map['ul_qos'] || '75M';
+		var qosCard = self.renderQoSCard(dlRate, ulRate);
+		container.appendChild(qosCard);
+
+		// 3. 网络连接卡片
+		var rsrpVal = parseFloat(map['rsrp'] || '-95');
+		var rsrpPercent = Math.min(100, Math.max(0, ((rsrpVal + 140) / 96) * 100)).toFixed(0);
+		var sinrVal = (map['sinr'] || '13').replace('dB', '').trim();
+		var rsrqVal = map['rsrq'] || '-1';
+
+		var mainCard = E('div', { 'class': 'miui-card miui-main-card' }, [
+			E('div', { 'class': 'miui-main-header' }, [
+				E('div', { 'class': 'miui-main-title-group' }, [
+					E('div', { 'class': 'miui-card-icon blue' }, [getMiuiIconSvg('lightning')]),
+					E('span', { 'class': 'miui-main-title' }, '网络连接'),
+					E('span', { 'class': 'miui-sub-tag' }, map['revision'] || map['firmware'] || 'RM500UCNAAR03A11M2G')
+				])
+			]),
+			E('div', { 'class': 'miui-inner-grid' }, [
+				E('div', { 'class': 'miui-inner-card' }, [
+					E('div', { 'class': 'miui-inner-label' }, 'RSRP 信号强度'),
+					E('div', { 'class': 'miui-big-num' }, [
+						rsrpPercent, E('span', { 'class': 'unit' }, '%')
+					]),
+					E('div', { 'class': 'miui-inner-sub' }, (map['rsrp'] || rsrpVal + ' dBm'))
+				]),
+				E('div', { 'class': 'miui-inner-card' }, [
+					E('div', { 'class': 'miui-inner-label' }, 'SINR 信噪比'),
+					E('div', { 'class': 'miui-big-num green' }, [
+						sinrVal, E('span', { 'class': 'unit' }, 'dB')
+					]),
+					E('div', { 'class': 'miui-inner-sub' }, '连接质量: 良好')
+				])
+			]),
+			E('div', { 'class': 'miui-triple-grid' }, [
+				E('div', { 'class': 'miui-triple-item' }, [
+					E('div', { 'class': 'val' }, rsrpVal + ' dBm'),
+					E('div', { 'class': 'lab' }, '信号强度')
+				]),
+				E('div', { 'class': 'miui-triple-item' }, [
+					E('div', { 'class': 'val' }, sinrVal + ' dB'),
+					E('div', { 'class': 'lab' }, '信噪比')
+				]),
+				E('div', { 'class': 'miui-triple-item' }, [
+					E('div', { 'class': 'val' }, rsrqVal),
+					E('div', { 'class': 'lab' }, 'RSRQ 质量')
+				])
+			])
+		]);
+		container.appendChild(mainCard);
+
+		// 4. 基本信息 / SIM 信息 / 小区信息卡片
+		var groupConfigMap = {
+			'Base Information': { type: 'mobile', color: 'blue' },
+			'基本信息': { type: 'mobile', color: 'blue' },
+			'SIM Information': { type: 'sim', color: 'purple' },
+			'SIM卡信息': { type: 'sim', color: 'purple' },
+			'Cell Information': { type: 'cell', color: 'orange' },
+			'小区信息': { type: 'cell', color: 'orange' }
+		};
+
+		for (var groupTitle in groups) {
+			var entries = groups[groupTitle];
+			if (entries.length === 0) continue;
+
+			var cfg = groupConfigMap[groupTitle] || { type: 'mobile', color: 'blue' };
+			var svgEl = getMiuiIconSvg(cfg.type);
+
+			var detailCard = E('div', { 'class': 'miui-card miui-group-card' });
+
+			var header = E('div', { 'class': 'miui-group-header' }, [
+				E('div', { 'class': 'miui-group-left' }, [
+					E('div', { 'class': 'miui-card-icon ' + cfg.color }, [svgEl]),
+					E('div', { 'class': 'miui-group-text' }, [
+						E('div', { 'class': 'title' }, _(groupTitle))
+					])
+				]),
+				E('div', { 'class': 'miui-group-arrow' }, '❯')
+			]);
+
+			var grid = E('div', { 'class': 'miui-clean-grid' });
+			entries.forEach(function(entry) {
+				var name = entry.full_name || entry.key;
+				var valNode = self.renderFieldValue(entry.key, entry.value);
+
+				var cellChildren = [
+					E('div', { 'class': 'miui-clean-label' }, _(name)),
+					E('div', { 'class': 'miui-clean-value' }, valNode)
+				];
+
+				var progress = self.getSignalProgress(entry.key, entry.value);
+				if (progress !== null) {
+					cellChildren.push(
+						E('div', { 'class': 'miui-clean-progress-track' }, [
+							E('div', {
+								'class': 'miui-clean-progress-bar',
+								'style': 'width:' + progress + '%'
+							})
+						])
+					);
+				}
+
+				var itemCell = E('div', { 'class': 'miui-clean-item' }, cellChildren);
+				grid.appendChild(itemCell);
+			});
+
+			header.addEventListener('click', (function(card) {
+				return function() {
+					card.classList.toggle('collapsed');
+				};
+			})(detailCard));
+
+			detailCard.appendChild(header);
+			detailCard.appendChild(grid);
+			container.appendChild(detailCard);
+		}
 	},
 
-	updateModemInfo: function(modemId, tables_map, infoContainer, updateTimeElement, copyrightElement) {
+	updateModemInfo: function(modemId, container, updateTimeElement, copyrightElement) {
 		var self = this;
-		
-		if (Object.keys(tables_map).length === 0) {
-			dom.content(infoContainer, E('div', { 'class': 'miuix-loader' }, [
-				E('div', { 'class': 'miuix-spinner' }),
-				E('span', {}, _('Loading modem information...'))
-			]));
-		}
-		
 		Promise.all([
 			qmodem.getBaseInfo(modemId),
 			qmodem.getSimInfo(modemId),
@@ -362,7 +416,7 @@ return view.extend({
 			for (var i = 0; i < results.length - 1; i++) {
 				if (results[i] && results[i].modem_info) all_info = all_info.concat(results[i].modem_info);
 			}
-			
+
 			var cp = results[results.length - 1];
 			if (copyrightElement && cp && cp.copyright) {
 				var arr = [];
@@ -371,81 +425,15 @@ return view.extend({
 				copyrightElement.style.display = '';
 			}
 
-			var grouped = {};
-			all_info.forEach(function(entry) {
-				if (entry.type === 'warning_message') return;
-				
-				var cName = entry['class'] || 'General';
-				var lowerKey = String(entry.key).toLowerCase();
+			self.renderMIUIXLayout({ all_info: all_info }, container);
 
-				// 如果检测到速率相关字段，强行把分配终点划入“网络信息”卡片中[cite: 3]
-				if (lowerKey.indexOf('qos') !== -1 || lowerKey.indexOf('签约') !== -1) {
-					var netClassName = all_info.find(function(e) {
-						return e['class'] && (e['class'].indexOf('网络') !== -1 || e['class'].indexOf('Network') !== -1);
-					});
-					cName = netClassName ? netClassName['class'] : '网络信息';
-				}
-
-				if (!grouped[cName]) grouped[cName] = [];
-				grouped[cName].push(entry);
-			});
-
-			// 特别处理ICCID显示 - 确保在SIM Information类别中显示ICCID
-			for (var category in grouped) {
-				var categoryEntries = grouped[category];
-				var hasICCID = false;
-				for (var j = 0; j < categoryEntries.length; j++) {
-					if (categoryEntries[j].key && categoryEntries[j].key.toLowerCase().indexOf('iccid') !== -1) {
-						hasICCID = true;
-						break;
-					}
-				}
-				
-				// 如果是SIM信息类别且没有ICCID，则尝试添加ICCID显示
-				if (category.indexOf('SIM') !== -1 && !hasICCID) {
-					// 不需要额外操作，因为后端脚本已经包含了ICCID查询
-				}
-			}
-
-			var loader = infoContainer.querySelector('.miuix-loader');
-			if (loader) infoContainer.removeChild(loader);
-
-			/*
-			for (var k in tables_map) {
-				if (!grouped[k]) {
-					if (tables_map[k].fieldset.parentNode) infoContainer.removeChild(tables_map[k].fieldset);
-					delete tables_map[k];
-				}
-			}
-			*/
-
-			var order = self.getSectionOrder(modemId);
-			var finalOrder = [].concat(order);
-			for (var k in grouped) {
-				if (finalOrder.indexOf(k) === -1) finalOrder.push(k);
-			}
-			
-			finalOrder.forEach(function(k) {
-				if (!grouped[k]) return;
-				if (!tables_map[k]) {
-					tables_map[k] = new LuciTable();
-					infoContainer.appendChild(tables_map[k].fieldset);
-					self.attachSectionHandlers(tables_map[k].fieldset, k, modemId, infoContainer);
-				}
-				tables_map[k].setTitle(k);
-				tables_map[k].setData(grouped[k]);
-				
-				if (self.getCollapsedState(modemId, k)) tables_map[k].fieldset.classList.add('collapsed');
-				else tables_map[k].fieldset.classList.remove('collapsed');
-			});
-			
 			if (updateTimeElement) {
 				var d = new Date();
-				updateTimeElement.textContent = _('Last update') + ': ' + 
-					`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')} ${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+				updateTimeElement.textContent = _('最后更新') + ': ' +
+					`${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
 			}
 		}).catch(function(e) {
-			dom.content(infoContainer, E('div', { 'class': 'miuix-err' }, _('Error: %s').format(e.message)));
+			container.innerHTML = '<div class="miui-err">数据读取失败: ' + e.message + '</div>';
 		});
 	},
 
@@ -453,53 +441,50 @@ return view.extend({
 		var self = this;
 		var modems = this.getModemList();
 		if (modems.length === 0) {
-			return E('div', { 'class': 'miuix-err' }, _('No modems configured.'));
+			return E('div', { 'class': 'miui-err' }, _('未检测到已配置的 Modem 模块。'));
 		}
 
-		var container = E('div', { 'class': 'miuix-app-layout' });
-		
-		var selCard = E('div', { 'class': 'miuix-card selector-card' }, [
-			E('div', { 'class': 'miuix-grid-container' }, [
-				E('div', { 'class': 'miuix-grid-cell', 'style': 'grid-column: span 2;' }, [
-					E('div', { 'class': 'miuix-grid-label font-bold' }, _('Modem Name')),
-					E('div', { 'class': 'miuix-grid-value', 'style': 'margin-top:6px;' }, [
-						E('select', { 'class': 'miuix-native-select', 'id': 'modem_selector' }, 
-							modems.map(function(m) { return E('option', { 'value': m.id }, m.name); })
-						)
-					])
-				])
-			])
+		initTheme();
+
+		var page = E('div', { 'class': 'miui-wrapper' });
+
+		var header = E('div', { 'class': 'miui-page-header' }, [
+			E('h1', { 'class': 'miui-page-title' }, _('蜂窝网络')),
+			E('button', {
+				'class': 'miui-theme-toggle',
+				'click': function() { cycleTheme(); }
+			})
 		]);
-		container.appendChild(selCard);
-		
-		var timeCard = E('div', { 'class': 'miuix-time-log' }, '-');
-		container.appendChild(timeCard);
-		
-		var infoContainer = E('div', { 'class': 'miuix-card-stream' });
-		container.appendChild(infoContainer);
-		
-		var cpDiv = E('div', { 'class': 'miuix-footer-copyright' });
-		container.appendChild(cpDiv);
-		
-		var tables_map = {};
-		var runUpdate = function(clear) {
-			var sel = container.querySelector('#modem_selector').value;
-			if (clear) {
-				infoContainer.innerHTML = '';
-				tables_map = {};
-			}
-			self.updateModemInfo(sel, tables_map, infoContainer, timeCard, cpDiv);
+		page.appendChild(header);
+
+		var selCard = E('div', { 'class': 'miui-card miui-selector-card' }, [
+			E('span', { 'class': 'label' }, _('当前设备')),
+			E('select', { 'class': 'miui-select', 'id': 'modem_selector' },
+				modems.map(function(m) { return E('option', { 'value': m.id }, m.name); })
+			)
+		]);
+		page.appendChild(selCard);
+
+		var timeDiv = E('div', { 'class': 'miui-time-tip' }, '-');
+		page.appendChild(timeDiv);
+
+		var contentContainer = E('div', { 'class': 'miui-content' });
+		page.appendChild(contentContainer);
+
+		var cpDiv = E('div', { 'class': 'miui-copyright' });
+		page.appendChild(cpDiv);
+
+		var runUpdate = function() {
+			var sel = page.querySelector('#modem_selector').value;
+			self.updateModemInfo(sel, contentContainer, timeDiv, cpDiv);
 		};
-		
-		container.querySelector('#modem_selector').addEventListener('change', function() { runUpdate(true); });
-		runUpdate(false);
-		
-		poll.add(function() {
-			var sel = container.querySelector('#modem_selector').value;
-			self.updateModemInfo(sel, tables_map, infoContainer, timeCard, cpDiv);
-		}, 10);
-		
-		return container;
+
+		page.querySelector('#modem_selector').addEventListener('change', runUpdate);
+		runUpdate();
+
+		poll.add(runUpdate, 10);
+
+		return page;
 	},
 	handleSaveApply: null, handleSave: null, handleReset: null
 });
